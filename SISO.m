@@ -4,12 +4,13 @@ clear all
 clc
 drawnow
 % Setup params
-SNRs=-5:10; % SNRs under consideration [dB]
+SNRs=0:20; % SNRs under consideration [dB]
 N=2^12; % Block length
 channelModels=[ 1:2]; % 1 - AWGN, 2 - Rayleigh 
 ModulationTypes=[2]; % 1 - BPSK, 2 - QPSK, 3- 8PSK, 4 - 16-QAM
 %
-MinErrorEvents=1e6;
+tol=1e-12;
+MinErrorEvents=1e4;
 MaxRealizations=1e4;
 ModulationsNames={'BPSK','QPSK','8PSK','16 QAM'};
 ChannelmodelNames={'AWGN','Rayleigh'};
@@ -18,8 +19,13 @@ rhos=10.^(-SNRs/20);
 [CM,MT,RHO]=ndgrid(channelModels,ModulationTypes,rhos);
 ScenarionsNum=numel(RHO);
 SymErrs=zeros(numel(channelModels),numel(ModulationTypes),numel(rhos)); % ChannelModelIndex,ModulationTypeIndex
+BitErrs=SymErrs;
 RealizedSymbolsNum=zeros(size(SymErrs)); % 
 for ScenarioIndex=1:ScenarionsNum
+    % Progress report
+    disp(['Processing scenaio ' num2str(ScenarioIndex) '/' num2str(ScenarionsNum) ' started at ' datestr(now)])
+    drawnow
+    %
     rho=RHO(ScenarioIndex);
     [ChannelModelIndex,ModulationTypeIndex,RhoIndex]=ind2sub(size(RHO),ScenarioIndex);
     channelModel=channelModels(ChannelModelIndex);
@@ -36,7 +42,7 @@ for ScenarioIndex=1:ScenarionsNum
             BitMapping=[0 1 3 2]'; % Grey code            
             Constellation=(-1i).^BitMapping;    
         case 3
-            BPS=3
+            BPS=3; % Bits Per Symbol
             BitMapping=[0 1 3 2 6 7 5 4];
             Constellation=exp(1i*2*pi*(0:7).');
         case 4 % 16-QAM
@@ -55,7 +61,9 @@ for ScenarioIndex=1:ScenarionsNum
     % Verify constellation statistics
     Es=sum(abs(Constellation).^2);
     Ms=mean(Constellation);
-    disp(['Test constellation normalization of scenario ' num2str(ScenarioIndex) '  - Var=' num2str(Es) ' mean=' num2str(mean(Constellation))])
+    if abs(Ms)>tol || abs(sqrt(Es)-1)>tol
+        disp(['Constellation normalization issue in scenario ' num2str(ScenarioIndex) '  - Var=' num2str(Es) ' mean=' num2str(mean(Constellation))])
+    end
     %
     RealizationIndex=0;
     KeepGoing=true;
@@ -64,8 +72,11 @@ for ScenarioIndex=1:ScenarionsNum
         % ******
         % * Tx *
         % ******        
-        b=randi(2^BPS,[SymbolsNum,1]);
-        s=Constellation(b);
+        TxSymbolIndices=randi(2^BPS,[SymbolsNum,1]);
+        TxBits=BitMapping(TxSymbolIndices);
+        TxBits=int2bit(TxBits',BPS); 
+        TxBits=TxBits(:);
+        s=Constellation(TxSymbolIndices);
         % *******
         % * PHY *
         % *******
@@ -80,14 +91,18 @@ for ScenarioIndex=1:ScenarionsNum
         end        
         y=h.*s+rho*n; % Received signal
         % ******
-        % * Rx *
+        % * Rx * 
         % ******
         [MSEval,MLindex]=min(abs( (y./h)*ones(size(Constellation'))  - ones(size(y))*(Constellation.') ).^2,[],2);
+        RxBits=BitMapping(MLindex);
+        RxBits=int2bit(RxBits',BPS); 
+        RxBits=RxBits(:);
         % ********
         % * EVAL *
         % ********
         % Evaluate preformance
-        SymErrs(ChannelModelIndex,ModulationTypeIndex,RhoIndex)=sum(MLindex~=b);
+        SymErrs(ChannelModelIndex,ModulationTypeIndex,RhoIndex)=sum(MLindex~=TxSymbolIndices);
+        BitErrs(ChannelModelIndex,ModulationTypeIndex,RhoIndex)=sum(RxBits~=TxBits);
         % ******
         % * MC *
         % ******
@@ -97,18 +112,33 @@ for ScenarioIndex=1:ScenarionsNum
 end
 % Analysis
 SER=SymErrs./RealizedSymbolsNum;
+BER=BitErrs./RealizedSymbolsNum;
+
 for ModulationTypeIndex=1:numel(ModulationTypes)
     ModulationType=ModulationTypes(ModulationTypeIndex );
-    figure('Name',ModulationsNames{ModulationType} );
+    hSym=figure('Name',ModulationsNames{ModulationType} );
+    hBit=figure('Name',ModulationsNames{ModulationType} );
     for ChannelModelIndex=1:numel(channelModels)
         channelModel=channelModels(ChannelModelIndex);
+        figure(hSym);        
         semilogy(SNRs, (squeeze(SER(ChannelModelIndex,ModulationTypeIndex,:))))
         hold on
+        figure(hBit)
+        semilogy(SNRs, (squeeze(BER(ChannelModelIndex,ModulationTypeIndex,:))))
+        hold on
     end
+    figure(hSym);  
     legend(ChannelmodelNames{:})
-    title(['ModulationType '  ModulationsNames{ModulationType}])
+    title(['SER vs SNR for modulationType '  ModulationsNames{ModulationType}])
     hold off
     grid on
     xlabel('SNR [dB]')
     ylabel('SER')
+    figure(hBit);  
+    legend(ChannelmodelNames{:})
+    title(['BER vs SNR for modulationType '  ModulationsNames{ModulationType}])
+    hold off
+    grid on
+    xlabel('SNR [dB]')
+    ylabel('BER')
 end
