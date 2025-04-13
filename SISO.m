@@ -25,26 +25,24 @@ for ScenarioIndex=1:ScenarionsNum
     % Progress report
     disp(['Processing scenaio ' num2str(ScenarioIndex) '/' num2str(ScenarionsNum) ' started at ' datestr(now)])
     drawnow
-    %
+    % Scenario parameters extraction
     rho=RHO(ScenarioIndex);
     [ChannelModelIndex,ModulationTypeIndex,RhoIndex]=ind2sub(size(RHO),ScenarioIndex);
     channelModel=channelModels(ChannelModelIndex);
     ModulationType=ModulationTypes(ModulationTypeIndex);
-    %
     switch ModulationType
-        case 1 % BPSK
+        case 1 % BPSK dmin=2
             BPS=1; % Bits Per Symbol
             BitMapping=[1 0]';
-            % Constellation design 
-            Constellation=(-1).^BitMapping;                
-        case 2 % QPSK
+            Constellation=(-1).^BitMapping;             % Constellation design               
+        case 2 % QPSK dmin=1/sqrt(2)
             BPS=2; % Bits Per Symbol
             BitMapping=[0 1 3 2]'; % Grey code            
             Constellation=(-1i).^BitMapping;    
         case 3
             BPS=3; % Bits Per Symbol
             BitMapping=[0 1 3 2 6 7 5 4];
-            Constellation=exp(1i*2*pi*(0:7).');
+            Constellation=exp(1i*2*pi*(0:7).'/8);
         case 4 % 16-QAM
             BPS=4;
             BitMapping1D=[0 1 3 2]'; % Grey code
