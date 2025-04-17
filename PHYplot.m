@@ -1,3 +1,4 @@
+% Plot physical channel
 clc
 close all
 clear all
