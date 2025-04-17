@@ -10,8 +10,8 @@ channelModels=[ 1:2]; % 1 - AWGN, 2 - Rayleigh
 ModulationTypes=[2]; % 1 - BPSK, 2 - QPSK, 3- 8PSK, 4 - 16-QAM
 %
 tol=1e-12;
-MinErrorEvents=1e4;
-MaxRealizations=1e4;
+MaxRealizations=1e3;
+MaxSymbolErrorEvents=MaxRealizations*N;
 ModulationsNames={'BPSK','QPSK','8PSK','16 QAM'};
 ChannelmodelNames={'AWGN','Rayleigh'};
 rhos=10.^(-SNRs/20);
@@ -54,13 +54,14 @@ for ScenarioIndex=1:ScenarionsNum
             BitMapping=BitMapping(:).';
     end
     SymbolsNum=N/2^(BPS-1);
-    Es=sum(abs(Constellation).^2);
-    Constellation=Constellation/sqrt(Es); % Normalize constellation
-    % Verify constellation statistics
-    Es=sum(abs(Constellation).^2);
+    Es=mean(abs(Constellation).^2);
     Ms=mean(Constellation);
     if abs(Ms)>tol || abs(sqrt(Es)-1)>tol
-        disp(['Constellation normalization issue in scenario ' num2str(ScenarioIndex) '  - Var=' num2str(Es) ' mean=' num2str(mean(Constellation))])
+        Constellation=(Constellation-Ms)/sqrt(Es); % Normalize constellation
+        % Verify constellation statistics
+        Es=mean(abs(Constellation).^2);
+        Ms=mean(Constellation);
+        disp(['Constellation normalization check for scenario ' num2str(ScenarioIndex) '  - Var=' num2str(Es) ' mean=' num2str(mean(Constellation))])
     end
     %
     RealizationIndex=0;
@@ -104,7 +105,7 @@ for ScenarioIndex=1:ScenarionsNum
         % ******
         % * MC *
         % ******
-        KeepGoing=RealizationIndex<=MaxRealizations;
+        KeepGoing=(RealizationIndex<MaxRealizations) && (SymErrs(ChannelModelIndex,ModulationTypeIndex,RhoIndex)<MaxSymbolErrorEvents);
     end
     RealizedSymbolsNum(ChannelModelIndex,ModulationTypeIndex,RhoIndex)=RealizationIndex*SymbolsNum;
 end
