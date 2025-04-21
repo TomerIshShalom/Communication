@@ -1,7 +1,7 @@
 % Uncoded Alamouti's Space Time Code (STC) 
 % Symbol Error Rate (SER) & Bit Error Rate (BER) 
 % Monte-Carlo simulation
-close all
+close all 
 clear all
 clc
 drawnow
@@ -10,19 +10,18 @@ SNRs=0:20; % SNRs under consideration [dB]
 N=2^12; % Block length
 channelModels=[ 2]; % 1 - AWGN, 2 - Rayleigh 
 ModulationTypes=[2]; % 1 - BPSK, 2 - QPSK, 3- 8PSK, 4 - 16-QAM
-RxNs=[ 1]; % #Rx antennas
 %
-RXNnames={'STC 2x1'};
+legends={'STC 2x1'};
 tol=1e-12;
-MaxRealizations=1e5; 
+MaxRealizations=1e2; 
 MaxSymbolErrors=N*MaxRealizations; % Maximal number of symbol errors per scenario
 ModulationsNames={'BPSK','QPSK','8PSK','16 QAM'};
 ChannelmodelNames={'AWGN','Rayleigh'};
 rhos=10.^(-SNRs/20);
 %
-[CM,MT,RHO,RXN]=ndgrid(channelModels,ModulationTypes,rhos,RxNs);
+[CM,MT,RHO]=ndgrid(channelModels,ModulationTypes,rhos);
 ScenarionsNum=numel(RHO);
-SymErrs=zeros(numel(RxNs),numel(ModulationTypes),numel(rhos)); % ChannelModelIndex,ModulationTypeIndex
+SymErrs=zeros(numel(ModulationTypes),numel(rhos)); % ChannelModelIndex,ModulationTypeIndex
 BitErrs=SymErrs;
 RealizedSymbolsNum=zeros(size(SymErrs)); % 
 for ScenarioIndex=1:ScenarionsNum
@@ -31,10 +30,9 @@ for ScenarioIndex=1:ScenarionsNum
     drawnow
     % Scenario parameters extraction
     rho=RHO(ScenarioIndex);
-    [ChannelModelIndex,ModulationTypeIndex,RhoIndex,RxNindex]=ind2sub(size(RHO),ScenarioIndex);
+    [ChannelModelIndex,ModulationTypeIndex,RhoIndex]=ind2sub(size(RHO),ScenarioIndex);
     channelModel=channelModels(ChannelModelIndex);
     ModulationType=ModulationTypes(ModulationTypeIndex);
-    RxN=RxNs(RxNindex); % #Rx antennas
     switch ModulationType
         case 1 % BPSK dmin=2
             BPS=1; % Bits Per Symbol
@@ -104,9 +102,10 @@ for ScenarioIndex=1:ScenarionsNum
         % ******
         habs2=sum(abs(h).^2,1)/sqrt(2);
         MSEsol(1,:)=sum([conj(h(1,:)); h(2,:) ].*y,1)./habs2;
-        MSEsol(2,:)=sum([conj(h(2,:)); -h(1,:) ].*y,1)./habs2;        
-        [MSEval,MLindex]=min(abs( ones(size(Constellation))*(MSEsol(:).') - Constellation*ones(1,SymbolsNum) ).^2,[],1);
-        MLindex=MLindex';
+        MSEsol(2,:)=sum([conj(h(2,:)); -h(1,:) ].*y,1)./habs2;  
+        MSEsol1=MSEsol(:).';
+        [MSEval,MLindex]=min(abs( ones(size(Constellation))*(MSEsol1) - Constellation*ones(1,SymbolsNum) ).^2,[],1);
+        MLindex=MLindex' ;
         RxBits=BitMapping(MLindex);
         RxBits=int2bit(RxBits',BPS); 
         RxBits=RxBits(:);
@@ -114,14 +113,14 @@ for ScenarioIndex=1:ScenarionsNum
         % * EVAL *
         % ********
         % Evaluate preformance
-        SymErrs(RxNindex,ModulationTypeIndex,RhoIndex)=sum(MLindex~=TxSymbolIndices);
-        BitErrs(RxNindex,ModulationTypeIndex,RhoIndex)=sum(RxBits~=TxBits);
+        SymErrs(ModulationTypeIndex,RhoIndex)=sum(MLindex~=TxSymbolIndices);
+        BitErrs(ModulationTypeIndex,RhoIndex)=sum(RxBits~=TxBits);
         % ******
         % * MC *
         % ******
-        KeepGoing=RealizationIndex<MaxRealizations && (SymErrs(RxNindex,ModulationTypeIndex,RhoIndex)<MaxSymbolErrors);
+        KeepGoing=RealizationIndex<MaxRealizations && (SymErrs(ModulationTypeIndex,RhoIndex)<MaxSymbolErrors);
     end
-    RealizedSymbolsNum(RxNindex,ModulationTypeIndex,RhoIndex)=RealizationIndex*SymbolsNum;
+    RealizedSymbolsNum(ModulationTypeIndex,RhoIndex)=RealizationIndex*SymbolsNum;
 end
 % Analysis
 SER=SymErrs./RealizedSymbolsNum;
@@ -132,28 +131,25 @@ for ModulationTypeIndex=1:numel(ModulationTypes)
     hSym=figure('Name',['Symbols ' ModulationsNames{ModulationType} ]);
     hBit=figure('Name',['Bits ' ModulationsNames{ModulationType}] );
     channelModel=channelModels(ChannelModelIndex);
-    for RxNindex=1:numel(RxNs)
-        LineStyle=num2linestyle(RxNindex);
-        Marker=num2marker(RxNindex);
-        %
-        RxN=RxNs(RxNindex);        
-        figure(hSym);        
-        semilogy(SNRs, (squeeze(SER(RxNindex,ModulationTypeIndex,:))),strcat(LineStyle, Marker) )
-        hold on
-        figure(hBit)
-        semilogy(SNRs, (squeeze(BER(RxNindex,ModulationTypeIndex,:))),strcat(LineStyle, Marker) )
-        hold on
-    end
+    LineStyle=num2linestyle(1);
+    Marker=num2marker(1);
+    %
+    figure(hSym);        
+    semilogy(SNRs, (squeeze(SER(ModulationTypeIndex,:))),strcat(LineStyle, Marker) )
+    hold on
+    figure(hBit)
+    semilogy(SNRs, (squeeze(BER(ModulationTypeIndex,:))),strcat(LineStyle, Marker) )
+    hold on
     figure(hSym);  
-    legend(RXNnames{:})
-    title(['MRC: SER vs SNR for modulationType '  ModulationsNames{ModulationType}])
+    legend(legends{:})
+    title(['STC: SER vs SNR for '  ModulationsNames{ModulationType} ' modulation.'  ])
     hold off
     grid on
     xlabel('SNR [dB]')
     ylabel('SER')
     figure(hBit);  
-    legend(RXNnames{:})
-    title(['MRC: BER vs SNR for modulationType '  ModulationsNames{ModulationType}])
+    legend(legends{:})
+    title(['STC: BER vs SNR for '  ModulationsNames{ModulationType} ' modulation.'  ])
     hold off
     grid on
     xlabel('SNR [dB]')
