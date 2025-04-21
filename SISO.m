@@ -10,7 +10,7 @@ channelModels=[ 1:2]; % 1 - AWGN, 2 - Rayleigh
 ModulationTypes=[2]; % 1 - BPSK, 2 - QPSK, 3- 8PSK, 4 - 16-QAM
 %
 tol=1e-12;
-MaxRealizations=1e3;
+MaxRealizations=1e4;
 MaxSymbolErrorEvents=MaxRealizations*N;
 ModulationsNames={'BPSK','QPSK','8PSK','16 QAM'};
 ChannelmodelNames={'AWGN','Rayleigh'};
