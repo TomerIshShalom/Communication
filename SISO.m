@@ -1,16 +1,16 @@
 % Uncoded SISO Symbol Error Rate (SER) Monte-Carlo simulation
 close all
-clear all
-clc
+%clear all
+%clc
 drawnow
 % Setup params
-SNRs=0:20; % SNRs under consideration [dB]
-N=2^12; % Block length
+SNRs=0:30; % SNRs under consideration [dB]
+N=2*500000;%2^12; % Block length
 channelModels=[ 1:2]; % 1 - AWGN, 2 - Rayleigh 
 ModulationTypes=[2]; % 1 - BPSK, 2 - QPSK, 3- 8PSK, 4 - 16-QAM
 %
 tol=1e-12;
-MaxRealizations=1e4;
+MaxRealizations=1e1;
 MaxSymbolErrorEvents=MaxRealizations*N;
 ModulationsNames={'BPSK','QPSK','8PSK','16 QAM'};
 ChannelmodelNames={'AWGN','Rayleigh'};
@@ -38,7 +38,8 @@ for ScenarioIndex=1:ScenarionsNum
         case 2 % QPSK dmin=1/sqrt(2)
             BPS=2; % Bits Per Symbol
             BitMapping=[0 1 3 2]'; % Grey code            
-            Constellation=(-1i).^BitMapping;    
+            % Constellation=(-1i).^BitMapping;  
+            Constellation=exp(-1i*(1.5:-1:-1.5)*2*pi/4).';
         case 3
             BPS=3; % Bits Per Symbol
             BitMapping=[0 1 3 2 6 7 5 4];
@@ -100,8 +101,8 @@ for ScenarioIndex=1:ScenarionsNum
         % * EVAL *
         % ********
         % Evaluate preformance
-        SymErrs(ChannelModelIndex,ModulationTypeIndex,RhoIndex)=sum(MLindex~=TxSymbolIndices);
-        BitErrs(ChannelModelIndex,ModulationTypeIndex,RhoIndex)=sum(RxBits~=TxBits);
+        SymErrs(ChannelModelIndex,ModulationTypeIndex,RhoIndex)=SymErrs(ChannelModelIndex,ModulationTypeIndex,RhoIndex)+sum(MLindex~=TxSymbolIndices);
+        BitErrs(ChannelModelIndex,ModulationTypeIndex,RhoIndex)=BitErrs(ChannelModelIndex,ModulationTypeIndex,RhoIndex)+sum(RxBits~=TxBits)/BPS;
         % ******
         % * MC *
         % ******
