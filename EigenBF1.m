@@ -113,8 +113,8 @@ for ScenarioIndex=1:ScenarionsNum
         % * EVAL *
         % ********
         % Evaluate preformance
-        SymErrs(TxNindex,ModulationTypeIndex,RhoIndex)=sum(MLindex~=TxSymbolIndices);
-        BitErrs(TxNindex,ModulationTypeIndex,RhoIndex)=sum(RxBits~=TxBits);
+        SymErrs(TxNindex,ModulationTypeIndex,RhoIndex)=SymErrs(TxNindex,ModulationTypeIndex,RhoIndex)+sum(MLindex~=TxSymbolIndices);
+        BitErrs(TxNindex,ModulationTypeIndex,RhoIndex)=BitErrs(TxNindex,ModulationTypeIndex,RhoIndex)+sum(RxBits~=TxBits)/BPS;
         % ******
         % * MC *
         % ******
