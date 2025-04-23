@@ -14,7 +14,7 @@ RxNs=[ 1:4]; % #Rx antennas
 iif  = @(varargin) varargin{2*find([varargin{1:2:end}], 1, 'first')}();
 RXNnames = arrayfun(@(x) iif(x==1, 'SISO',true ,['MRC 1x' num2str(x) ]),RxNs,'UniformOutput',false);
 tol=1e-12;
-MaxRealizations=1e3; 
+MaxRealizations=1e1; 
 MaxSymbolErrors=MaxRealizations*N; % Max symbols error events number
 ModulationsNames={'BPSK','QPSK','8PSK','16 QAM'};
 ChannelmodelNames={'AWGN','Rayleigh'};
@@ -108,8 +108,8 @@ for ScenarioIndex=1:ScenarionsNum
         % * EVAL *
         % ********
         % Evaluate preformance
-        SymErrs(RxNindex,ModulationTypeIndex,RhoIndex)=sum(MLindex~=TxSymbolIndices);
-        BitErrs(RxNindex,ModulationTypeIndex,RhoIndex)=sum(RxBits~=TxBits);
+        SymErrs(RxNindex,ModulationTypeIndex,RhoIndex)=SymErrs(RxNindex,ModulationTypeIndex,RhoIndex) + sum(MLindex~=TxSymbolIndices);
+        BitErrs(RxNindex,ModulationTypeIndex,RhoIndex)=BitErrs(RxNindex,ModulationTypeIndex,RhoIndex) + sum(RxBits~=TxBits)/BPS;
         % ******
         % * MC *
         % ******
